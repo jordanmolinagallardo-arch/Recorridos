@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#060a14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RutaPro">
+  <meta name="description" content="Gestión profesional de recorridos escolares">
+  <title>RutaPro</title>
+  <script>
+    // Suppress Tailwind CDN dev warning (cosmetic only — app works perfectly)
+    (function(){const w=console.warn;console.warn=function(){if(arguments[0]&&String(arguments[0]).includes('cdn.tailwindcss.com'))return;w.apply(console,arguments);};})();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"','system-ui','sans-serif'] } } }
+    }
+  </script>
+  <style>
+    [x-cloak]{display:none!important}
+    *{box-sizing:border-box}
+    body{background:#060a14;color:#e2e8f0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:#0a1220}
+    ::-webkit-scrollbar-thumb{background:#1e3560;border-radius:4px}
+    ::-webkit-scrollbar-thumb:hover{background:#3b82f6}
+    input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+    .page-anim{animation:pageIn .22s ease}
+    @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .spin{animation:spin .75s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .card{background:#0d1a30;border:1px solid #1a2e52;border-radius:14px;transition:border-color .2s,box-shadow .2s}
+    .card-hover:hover{border-color:#2a4a82;box-shadow:0 4px 20px rgba(59,130,246,.08)}
+    .btn-primary{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;font-weight:600;border-radius:10px;transition:opacity .15s,transform .1s,box-shadow .15s;padding:.6rem 1.25rem;font-size:.875rem;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.4rem}
+    .btn-primary:hover{opacity:.92;box-shadow:0 4px 16px rgba(59,130,246,.35)}
+    .btn-primary:active{transform:scale(.97)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-ghost{color:#94a3b8;border:1px solid #1a2e52;border-radius:10px;transition:all .15s;padding:.55rem 1rem;font-size:.875rem;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.4rem}
+    .btn-ghost:hover{background:#0d1a30;color:#e2e8f0;border-color:#2a4a82}
+    .btn-ghost:active{transform:scale(.97)}
+    .input-field{background:#0a1220;border:1.5px solid #1a2e52;border-radius:10px;color:#e2e8f0;padding:.6rem .875rem;font-size:.875rem;width:100%;transition:border-color .15s,box-shadow .15s;font-family:inherit;outline:none}
+    .input-field:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+    .input-field::placeholder{color:#3d5070}
+    select.input-field option{background:#0d1526;color:#e2e8f0}
+    textarea.input-field{resize:vertical;min-height:70px}
+    .badge-green{background:#052e1c;color:#34d399;border:1px solid #064e3b;border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;line-height:1.4}
+    .badge-red{background:#2d0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;line-height:1.4}
+    .badge-yellow{background:#2d1a00;color:#fbbf24;border:1px solid #78350f;border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;line-height:1.4}
+    .badge-blue{background:#0c1e4a;color:#93c5fd;border:1px solid #1e3a8a;border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;line-height:1.4}
+    .badge-gray{background:#161f30;color:#94a3b8;border:1px solid #2d3748;border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;line-height:1.4}
+    .nav-item{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.55rem .4rem;font-size:.62rem;font-weight:600;color:#475569;cursor:pointer;transition:color .15s;border-radius:8px;min-width:48px;letter-spacing:.01em}
+    .nav-item.active{color:#3b82f6}
+    .nav-item:hover{color:#93c5fd}
+    .sidebar-item{display:flex;align-items:center;gap:.7rem;padding:.65rem .9rem;border-radius:10px;font-size:.875rem;font-weight:500;color:#64748b;cursor:pointer;transition:all .15s;width:100%;text-align:left;border:none;background:transparent}
+    .sidebar-item.active{background:#0f2045;color:#60a5fa}
+    .sidebar-item:hover:not(.active){background:#0d1a30;color:#94a3b8}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
+    .modal-box{background:#0d1a30;border:1px solid #1a2e52;border-radius:20px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;animation:modalIn .2s cubic-bezier(.34,1.3,.64,1)}
+    @keyframes modalIn{from{opacity:0;transform:scale(.93) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    .toast-item{background:#0d1a30;border:1px solid #1a2e52;border-radius:12px;padding:.7rem 1rem;font-size:.825rem;font-weight:500;display:flex;align-items:center;gap:.6rem;animation:slideUp .25s ease;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.5);margin-bottom:.4rem}
+    @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .kpi-card{background:#0d1a30;border:1px solid #1a2e52;border-radius:16px;padding:1.1rem 1.25rem;transition:border-color .2s}
+    .kpi-card:hover{border-color:#2a4a82}
+    .table-row{border-bottom:1px solid #111d32;transition:background .1s;cursor:pointer}
+    .table-row:hover{background:#0f1e38}
+    .table-row:last-child{border-bottom:none}
+    .fab{position:fixed;bottom:5.5rem;right:1.25rem;width:54px;height:54px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(59,130,246,.5);cursor:pointer;z-index:30;transition:transform .15s,box-shadow .15s;border:none}
+    .fab:hover{transform:scale(1.08);box-shadow:0 6px 32px rgba(59,130,246,.65)}
+    .fab:active{transform:scale(.94)}
+    @media(min-width:1024px){.fab{bottom:2rem;right:2rem}}
+    .chip{padding:.3rem .8rem;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid transparent;white-space:nowrap;display:inline-flex;align-items:center;gap:.3rem}
+    .chip.active{background:#0f2045;color:#60a5fa;border-color:#1e3a8a}
+    .chip:not(.active){background:#0a1422;color:#64748b;border-color:#1a2e52}
+    .chip:hover:not(.active){border-color:#2a4a82;color:#94a3b8}
+    .pb-safe{padding-bottom:calc(5.2rem + env(safe-area-inset-bottom))}
+    @media(min-width:1024px){.pb-safe{padding-bottom:2rem}}
+    .section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#475569;margin-bottom:.5rem}
+    .divider{border:none;border-top:1px solid #111d32;margin:.25rem 0}
+  </style>
+</head>
+<body x-data="app()" x-init="init()" class="min-h-screen">
+
+<!-- ========== LOADING ========== -->
+<div x-show="isLoading" x-cloak class="fixed inset-0 z-[200] flex flex-col items-center justify-center" style="background:#060a14">
+  <div class="relative mb-6">
+    <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-1.967 1.679L.5 14.28A2 2 0 0 0 2 16.5V18h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>
+    </div>
+    <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-blue-500 border-t-transparent spin" style="background:transparent"></div>
+  </div>
+  <p class="text-white font-bold text-xl tracking-tight">RutaPro</p>
+  <p class="text-slate-500 text-sm mt-1">Iniciando aplicación...</p>
+</div>
+
+<!-- ========== INIT ERROR ========== -->
+<div x-show="initError && !isLoading" x-cloak class="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style="background:#060a14;z-index:999">
+  <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style="background:#2d0a0a;border:2px solid #7f1d1d">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  </div>
+  <h2 class="text-white font-bold text-lg mb-2">Error de inicialización</h2>
+  <p class="text-red-400 text-sm mb-1" x-text="initError"></p>
+  <p class="text-slate-500 text-xs mb-5">Asegúrate de tener conexión a internet la primera vez.</p>
+  <button onclick="location.reload()" class="btn-primary px-6 py-2.5">🔄 Reintentar</button>
+</div>
+
+<!-- ========== LOGIN ========== -->
+<div x-show="!isAuthenticated && !isLoading" x-cloak
+     class="fixed inset-0 flex items-center justify-center p-5"
+     style="background:radial-gradient(ellipse 80% 60% at 30% 40%,#0a1f3e 0%,#060a14 65%)">
+  <div class="w-full max-w-[340px]">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);box-shadow:0 8px 32px rgba(59,130,246,.4)">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-1.967 1.679L.5 14.28A2 2 0 0 0 2 16.5V18h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>
+      </div>
+      <h1 class="text-2xl font-extrabold text-white tracking-tight">RutaPro</h1>
+      <p class="text-slate-500 text-sm mt-1 font-medium">Gestión de Recorridos Escolares</p>
+    </div>
+    <div class="card p-6">
+      <p class="text-slate-400 text-sm font-medium mb-4 text-center">Ingresa tu contraseña</p>
+      <div class="mb-3">
+        <input x-model="loginPass" @keydown.enter="login()"
+               :type="showLoginPass ? 'text' : 'password'"
+               class="input-field text-center text-lg tracking-widest font-bold"
+               placeholder="••••" autocomplete="current-password" autofocus>
+      </div>
+      <label class="flex items-center gap-2 mb-4 cursor-pointer">
+        <input type="checkbox" x-model="showLoginPass" class="w-3.5 h-3.5 accent-blue-500 rounded">
+        <span class="text-slate-500 text-xs">Mostrar contraseña</span>
+      </label>
+      <div x-show="loginError" class="flex items-center gap-2 text-red-400 text-sm mb-3 bg-red-900/15 rounded-lg p-2.5">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span x-text="loginError"></span>
+      </div>
+      <button @click="login()" :disabled="loginLoading" class="btn-primary w-full py-3">
+        <span x-show="loginLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full spin"></span>
+        <span x-text="loginLoading ? 'Verificando...' : 'Entrar'"></span>
+      </button>
+    </div>
+    <p class="text-slate-700 text-xs text-center mt-5">RutaPro v1.0 &bull; 100% offline &bull; Datos locales seguros</p>
+  </div>
+</div>
+
+<!-- ========== MAIN APP ========== -->
+<div x-show="isAuthenticated && !isLoading && !initError" x-cloak class="min-h-screen">
+
+  <!-- DESKTOP SIDEBAR -->
+  <aside class="hidden lg:flex flex-col fixed left-0 top-0 h-full w-60 z-40 border-r border-[#111d32]" style="background:#090e1d">
+    <div class="p-4 border-b border-[#111d32] flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-1.967 1.679L.5 14.28A2 2 0 0 0 2 16.5V18h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>
+      </div>
+      <div>
+        <p class="font-bold text-white text-sm leading-tight">RutaPro</p>
+        <p class="text-slate-600 text-xs">Recorridos Escolares</p>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <template x-for="item in navItems" :key="item.id">
+        <button @click="navigate(item.id)" :class="['sidebar-item', page===item.id ? 'active' : '']">
+          <span x-html="item.icon" class="flex-shrink-0 w-5 h-5 flex items-center justify-center"></span>
+          <span x-text="item.label"></span>
+        </button>
+      </template>
+    </nav>
+    <div class="p-3 border-t border-[#111d32]">
+      <div class="flex items-center gap-2 px-2 py-1.5 mb-2">
+        <div class="w-7 h-7 rounded-full bg-blue-900/40 flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span class="text-slate-500 text-xs">Administrador</span>
+      </div>
+      <button @click="logout()" class="sidebar-item text-red-400 hover:bg-red-900/15 hover:text-red-300 w-full">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="lg:ml-60 pb-safe" id="mainContent">
+
+    <!-- ====== DASHBOARD ====== -->
+    <section x-show="page==='dashboard'" class="page-anim p-4 lg:p-6 max-w-7xl mx-auto">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h1 class="text-xl font-extrabold text-white tracking-tight">Panel Principal</h1>
+          <p class="text-slate-500 text-xs mt-0.5" x-text="'Actualizado: ' + formatDateDisplay(new Date())"></p>
+        </div>
+        <div class="flex items-center gap-2">
+        <div class="hidden sm:flex items-center gap-1.5 text-xs font-medium" style="color:#34d399">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Guardado</span>
+        </div>
+        <button @click="loadDashboardData();renderCharts()" class="btn-ghost p-2" title="Actualizar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <div class="kpi-card">
+          <div class="flex items-start justify-between mb-1">
+            <p class="section-label">Activos</p>
+            <svg class="text-blue-500 opacity-60" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <p class="text-3xl font-extrabold text-white" x-text="stats.totalActivos"></p>
+          <p class="text-slate-500 text-xs mt-1">clientes activos</p>
+        </div>
+        <div class="kpi-card">
+          <div class="flex items-start justify-between mb-1">
+            <p class="section-label">Ingresos Mes</p>
+            <svg class="text-emerald-500 opacity-60" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <p class="text-3xl font-extrabold text-emerald-400" x-text="'$' + formatNum(stats.ingresosMes)"></p>
+          <p class="text-slate-500 text-xs mt-1" x-text="'de $' + formatNum(stats.esperadoMes) + ' esperado'"></p>
+        </div>
+        <div class="kpi-card">
+          <div class="flex items-start justify-between mb-1">
+            <p class="section-label">Deuda Total</p>
+            <svg class="text-red-500 opacity-60" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <p class="text-3xl font-extrabold text-red-400" x-text="'$' + formatNum(stats.deudaTotal)"></p>
+          <p class="text-slate-500 text-xs mt-1" x-text="stats.clientesMorosos + ' moroso(s)'"></p>
+        </div>
+        <div class="kpi-card">
+          <div class="flex items-start justify-between mb-1">
+            <p class="section-label">Morosidad</p>
+            <svg class="text-amber-500 opacity-60" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <p class="text-3xl font-extrabold text-amber-400" x-text="stats.tasaMorosidad + '%'"></p>
+          <p class="text-slate-500 text-xs mt-1">tasa del mes</p>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid lg:grid-cols-2 gap-4 mb-4">
+        <div class="card p-4">
+          <p class="text-white font-semibold text-sm mb-3">Clientes por Colegio</p>
+          <div style="height:170px;position:relative">
+            <canvas id="chartColegios" x-show="dashboardColegios.length>0"></canvas>
+            <div x-show="dashboardColegios.length===0" class="absolute inset-0 flex items-center justify-center text-slate-600 text-sm">Sin datos</div>
+          </div>
+        </div>
+        <div class="card p-4">
+          <p class="text-white font-semibold text-sm mb-3">Ingresos últimos 6 meses</p>
+          <div style="height:170px;position:relative">
+            <canvas id="chartIngresos" x-show="dashboardIngresos.length>0"></canvas>
+            <div x-show="dashboardIngresos.length===0" class="absolute inset-0 flex items-center justify-center text-slate-600 text-sm">Sin datos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Por colegio -->
+      <div class="card p-4 mb-4" x-show="dashboardColegios.length>0">
+        <p class="text-white font-semibold text-sm mb-3">Resumen por Colegio</p>
+        <div class="space-y-0">
+          <template x-for="c in dashboardColegios" :key="c.nombre">
+            <div class="flex items-center justify-between py-2.5 border-b border-[#111d32] last:border-0">
+              <div>
+                <p class="text-white text-sm font-semibold" x-text="c.nombre"></p>
+                <p class="text-slate-500 text-xs" x-text="c.total + ' estudiante(s)'"></p>
+              </div>
+              <div class="text-right">
+                <p class="text-emerald-400 font-bold text-sm" x-text="'$' + formatNum(c.monto)"></p>
+                <p class="text-slate-600 text-xs">por mes</p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Morosos -->
+      <div class="card p-4" x-show="morososList.length>0">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-white font-semibold text-sm flex items-center gap-1.5">
+            <svg class="text-red-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Con deuda
+          </p>
+          <button @click="clientFilters.pago='atrasado';navigate('clients')" class="text-blue-400 text-xs hover:text-blue-300">Ver todos →</button>
+        </div>
+        <div class="space-y-0">
+          <template x-for="c in morososList.slice(0,7)" :key="c.id">
+            <div @click="viewClientDetail(c)" class="flex items-center justify-between py-2.5 border-b border-[#111d32] last:border-0 cursor-pointer hover:bg-[#0f1e38] -mx-1 px-1 rounded-lg transition-colors">
+              <div>
+                <p class="text-white text-sm font-medium" x-text="c.apellido + ', ' + c.nombre"></p>
+                <p class="text-slate-500 text-xs" x-text="(c.colegio||'Sin colegio') + ' · ' + c.mesesDeuda + ' mes(es)'"></p>
+              </div>
+              <span class="badge-red" x-text="'$' + formatNum(c.deuda)"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div x-show="clientes.length===0" class="text-center py-16">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 opacity-30" style="background:#1a2e52">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <p class="text-slate-500 font-semibold">¡Comienza agregando clientes!</p>
+        <p class="text-slate-600 text-sm mt-1">Ve a la sección Clientes para agregar el primero</p>
+        <button @click="navigate('clients');openAddClient()" class="btn-primary mt-4 px-5">
+          Agregar primer cliente
+        </button>
+      </div>
+    </section>
+
+    <!-- ====== CLIENTS ====== -->
+    <section x-show="page==='clients'" class="page-anim">
+      <div class="sticky top-0 z-20 px-4 lg:px-6 pt-4 pb-3 border-b border-[#111d32]" style="background:#060a14">
+        <div class="flex items-center justify-between mb-3">
+          <h1 class="text-xl font-extrabold text-white tracking-tight">Clientes</h1>
+          <button class="hidden lg:flex btn-primary gap-1.5 text-sm py-2" @click="openAddClient()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo Cliente
+          </button>
+        </div>
+        <div class="relative mb-2.5">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style="color:#3d5070" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="searchInput" x-model="clientSearch" type="search" autocomplete="off"
+                 placeholder="Nombre, colegio, teléfono..." class="input-field pl-9 pr-9">
+          <button x-show="clientSearch" @click="clientSearch=''" class="absolute right-3 top-1/2 -translate-y-1/2" style="color:#3d5070">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="flex gap-1.5 overflow-x-auto pb-1" style="scrollbar-width:none">
+          <button @click="resetFilters()" :class="['chip',isAllFilter?'active':'']">
+            Todos <span class="opacity-60 text-xs" x-text="clientes.length"></span>
+          </button>
+          <button @click="setFilter('estado','activo')" :class="['chip',clientFilters.estado==='activo'&&clientFilters.pago==='all'?'active':'']">Activos</button>
+          <button @click="setFilter('estado','inactivo')" :class="['chip',clientFilters.estado==='inactivo'?'active':'']">Inactivos</button>
+          <button @click="setFilter('pago','atrasado')" :class="['chip',clientFilters.pago==='atrasado'?'active':'']">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Morosos
+          </button>
+          <button @click="setFilter('pago','aldia')" :class="['chip',clientFilters.pago==='aldia'?'active':'']">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Al día
+          </button>
+          <template x-for="col in colegios.slice(0,5)" :key="col.id">
+            <button @click="setColegioFilter(col.nombre)" :class="['chip',clientFilters.colegio===col.nombre?'active':'']" x-text="col.nombre"></button>
+          </template>
+        </div>
+        <p class="text-slate-600 text-xs mt-1.5" x-text="filteredClientes.length + ' resultado(s)'"></p>
+      </div>
+
+      <div class="px-4 lg:px-6 py-3">
+        <!-- Empty -->
+        <div x-show="filteredClientes.length===0" class="text-center py-16">
+          <svg class="mx-auto mb-3 opacity-20" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.3"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <p class="text-slate-500 font-semibold">Sin resultados</p>
+          <p class="text-slate-600 text-sm mt-1">Prueba con otros filtros o agrega clientes</p>
+        </div>
+
+        <!-- Desktop table -->
+        <div class="hidden lg:block" x-show="filteredClientes.length>0">
+          <table class="w-full">
+            <thead>
+              <tr>
+                <th @click="sortClients('apellido')" class="py-2.5 px-3 text-left section-label cursor-pointer hover:text-slate-300 transition-colors">
+                  Nombre <span x-show="clientSort.field==='apellido'" x-text="clientSort.dir==='asc'?'↑':'↓'" class="text-blue-400"></span>
+                </th>
+                <th @click="sortClients('colegio')" class="py-2.5 px-3 text-left section-label cursor-pointer hover:text-slate-300 transition-colors">
+                  Colegio <span x-show="clientSort.field==='colegio'" x-text="clientSort.dir==='asc'?'↑':'↓'" class="text-blue-400"></span>
+                </th>
+                <th class="py-2.5 px-3 text-left section-label">Plan</th>
+                <th class="py-2.5 px-3 text-left section-label">Monto</th>
+                <th class="py-2.5 px-3 text-left section-label">Estado</th>
+                <th class="py-2.5 px-3 text-left section-label">Deuda</th>
+                <th class="py-2.5 px-3 text-left section-label">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="client in pagedClientes" :key="client.id">
+                <tr class="table-row" @click="viewClientDetail(client)">
+                  <td class="py-3 px-3">
+                    <p class="text-white font-semibold text-sm" x-text="client.apellido + ', ' + client.nombre"></p>
+                    <p class="text-slate-500 text-xs" x-text="client.telefono||'—'"></p>
+                  </td>
+                  <td class="py-3 px-3">
+                    <p class="text-slate-300 text-sm" x-text="client.colegio||'—'"></p>
+                    <p class="text-slate-600 text-xs" x-text="client.grado||''"></p>
+                  </td>
+                  <td class="py-3 px-3"><span class="badge-blue" x-text="getPlanShort(client.tipoPlan)"></span></td>
+                  <td class="py-3 px-3 text-slate-300 text-sm font-semibold" x-text="'$' + formatNum(getClientMonto(client))"></td>
+                  <td class="py-3 px-3">
+                    <span :class="client.estado==='activo'?'badge-green':'badge-gray'" x-text="client.estado==='activo'?'Activo':'Inactivo'"></span>
+                  </td>
+                  <td class="py-3 px-3">
+                    <span x-show="(debtMap[client.id]||0)>0" class="badge-red" x-text="'$'+formatNum(debtMap[client.id])"></span>
+                    <span x-show="!(debtMap[client.id]||0)" class="badge-green">Al día</span>
+                  </td>
+                  <td class="py-3 px-3" @click.stop="">
+                    <div class="flex gap-1 items-center">
+                      <button @click="openEditClient(client)" class="btn-ghost p-1.5" title="Editar">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <a :href="'https://wa.me/'+cleanPhone(client.telefono)" target="_blank" @click.stop="" class="btn-ghost p-1.5" style="color:#34d399" title="WhatsApp">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                      </a>
+                      <button @click="confirmDelete('client',client)" class="btn-ghost p-1.5" style="color:#f87171" @click.stop="" title="Eliminar">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile cards -->
+        <div class="lg:hidden space-y-2">
+          <template x-for="client in pagedClientes" :key="client.id">
+            <div @click="viewClientDetail(client)" class="card card-hover p-3.5 cursor-pointer active:scale-[.99] transition-transform">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1 min-w-0 mr-2">
+                  <p class="text-white font-bold text-sm" x-text="client.apellido + ', ' + client.nombre"></p>
+                  <p class="text-slate-500 text-xs mt-0.5" x-text="(client.colegio||'Sin colegio') + (client.grado?' · '+client.grado:'')"></p>
+                </div>
+                <span :class="client.estado==='activo'?'badge-green':'badge-gray'" x-text="client.estado==='activo'?'Activo':'Inactivo'"></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="badge-blue text-xs" x-text="getPlanShort(client.tipoPlan)"></span>
+                  <span class="text-slate-400 text-xs font-bold" x-text="'$'+formatNum(getClientMonto(client))+'/mes'"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span x-show="(debtMap[client.id]||0)>0" class="badge-red text-xs" x-text="'Debe $'+formatNum(debtMap[client.id])"></span>
+                  <span x-show="!(debtMap[client.id]||0)" class="badge-green text-xs">Al día</span>
+                  <a :href="'https://wa.me/'+cleanPhone(client.telefono)" target="_blank" @click.stop="" class="p-1" style="color:#34d399">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Pagination -->
+        <div x-show="filteredClientes.length>clientsPerPage" class="flex items-center justify-center gap-3 mt-5">
+          <button @click="clientPage=Math.max(1,clientPage-1)" :disabled="clientPage<=1" class="btn-ghost py-1.5 px-3 text-sm disabled:opacity-40">← Anterior</button>
+          <span class="text-slate-500 text-sm" x-text="'Pág. '+clientPage+' / '+Math.ceil(filteredClientes.length/clientsPerPage)"></span>
+          <button @click="clientPage=Math.min(Math.ceil(filteredClientes.length/clientsPerPage),clientPage+1)" :disabled="clientPage>=Math.ceil(filteredClientes.length/clientsPerPage)" class="btn-ghost py-1.5 px-3 text-sm disabled:opacity-40">Siguiente →</button>
+        </div>
+      </div>
+
+      <div class="fab lg:hidden" @click="openAddClient()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+    </section>
+
+    <!-- ====== BILLING ====== -->
+    <section x-show="page==='billing'" class="page-anim px-4 lg:px-6 py-4 max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h1 class="text-xl font-extrabold text-white tracking-tight">Control de Pagos</h1>
+        <button @click="exportCSV('pagos')" class="btn-ghost text-xs">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
+      </div>
+
+      <!-- Month selector -->
+      <div class="card p-3 flex items-center gap-3 mb-4">
+        <button @click="prevBillingMonth()" class="btn-ghost p-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="flex-1 text-center">
+          <p class="text-white font-bold text-lg" x-text="monthName(billingMes) + ' ' + billingAnio"></p>
+        </div>
+        <button @click="nextBillingMonth()" class="btn-ghost p-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      <!-- Summary -->
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="kpi-card text-center py-3">
+          <p class="text-emerald-400 font-extrabold text-xl" x-text="'$'+formatNum(billingSummary.cobrado)"></p>
+          <p class="text-slate-500 text-xs mt-0.5">Cobrado</p>
+        </div>
+        <div class="kpi-card text-center py-3">
+          <p class="text-amber-400 font-extrabold text-xl" x-text="'$'+formatNum(billingSummary.pendiente)"></p>
+          <p class="text-slate-500 text-xs mt-0.5">Pendiente</p>
+        </div>
+        <div class="kpi-card text-center py-3">
+          <p class="text-red-400 font-extrabold text-xl" x-text="'$'+formatNum(billingSummary.atrasado)"></p>
+          <p class="text-slate-500 text-xs mt-0.5">Atrasado</p>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="flex gap-2 mb-3">
+        <button @click="billingFilter='all'" :class="['chip',billingFilter==='all'?'active':'']">Todos <span class="opacity-60 text-xs" x-text="billingData.length"></span></button>
+        <button @click="billingFilter='pendiente'" :class="['chip',billingFilter==='pendiente'?'active':'']">Pendiente</button>
+        <button @click="billingFilter='atrasado'" :class="['chip',billingFilter==='atrasado'?'active':'']">Atrasado</button>
+        <button @click="billingFilter='pagado'" :class="['chip',billingFilter==='pagado'?'active':'']">Pagado</button>
+      </div>
+
+      <div class="space-y-2">
+        <template x-for="item in filteredBillingData" :key="item.pago.id">
+          <div class="card p-3.5">
+            <div class="flex items-start gap-3">
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-bold text-sm" x-text="item.cliente.apellido+', '+item.cliente.nombre"></p>
+                <p class="text-slate-500 text-xs mt-0.5" x-text="(item.cliente.colegio||'Sin colegio')+' · '+getPlanShort(item.cliente.tipoPlan)"></p>
+                <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  <span :class="item.pago.estado==='pagado'?'badge-green':item.pago.estado==='atrasado'?'badge-red':'badge-yellow'"
+                        x-text="item.pago.estado==='pagado'?'✓ Pagado':item.pago.estado==='atrasado'?'Atrasado':'Pendiente'"></span>
+                  <span x-show="item.deudaTotal>0" class="text-red-400 text-xs font-semibold" x-text="'Deuda acum.: $'+formatNum(item.deudaTotal)"></span>
+                </div>
+                <p x-show="item.pago.fechaPago" class="text-slate-600 text-xs mt-1" x-text="'Pagado el '+formatDateDisplay(item.pago.fechaPago)"></p>
+                <p x-show="item.pago.notas" class="text-slate-600 text-xs italic mt-0.5" x-text="item.pago.notas"></p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <span class="text-white font-extrabold text-base" x-text="'$'+formatNum(item.pago.monto)"></span>
+                <button x-show="item.pago.estado!=='pagado'" @click="openPayModal(item.pago,item.cliente)" class="btn-primary py-1.5 px-3 text-xs">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Cobrar
+                </button>
+                <button x-show="item.pago.estado==='pagado'" @click="unpayPayment(item.pago)" class="btn-ghost py-1.5 px-3 text-xs" style="color:#fbbf24">
+                  Deshacer
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="filteredBillingData.length===0" class="text-center py-14">
+          <svg class="mx-auto mb-2 opacity-20" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          <p class="text-slate-600">No hay registros para este mes</p>
+          <p class="text-slate-700 text-xs mt-1">Los pagos se generan automáticamente para clientes activos</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== ATTENDANCE ====== -->
+    <section x-show="page==='attendance'" class="page-anim px-4 lg:px-6 py-4 max-w-3xl mx-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h1 class="text-xl font-extrabold text-white tracking-tight">Asistencia</h1>
+        <button @click="exportCSV('asistencia')" class="btn-ghost text-xs">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+      </div>
+      <!-- Date -->
+      <div class="card p-3 flex items-center gap-2 mb-4">
+        <button @click="changeAttDate(-1)" class="btn-ghost p-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <input type="date" x-model="attDate" @change="loadAttendanceData()" :max="todayStr" class="input-field flex-1 text-center font-semibold">
+        <button @click="changeAttDate(1)" :disabled="attDate>=todayStr" class="btn-ghost p-2 disabled:opacity-40">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <!-- Summary -->
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="kpi-card text-center py-3">
+          <p class="text-blue-400 font-extrabold text-2xl" x-text="attSummary.totalIda"></p>
+          <p class="text-slate-500 text-xs mt-0.5">Ida</p>
+        </div>
+        <div class="kpi-card text-center py-3">
+          <p class="text-purple-400 font-extrabold text-2xl" x-text="attSummary.totalRetorno"></p>
+          <p class="text-slate-500 text-xs mt-0.5">Retorno</p>
+        </div>
+        <div class="kpi-card text-center py-3">
+          <p class="text-slate-400 font-extrabold text-2xl" x-text="attSummary.ausentes"></p>
+          <p class="text-slate-500 text-xs mt-0.5">Ausentes</p>
+        </div>
+      </div>
+      <!-- Header row -->
+      <div class="flex items-center justify-between mb-2.5">
+        <p class="section-label">Marcar Asistencia</p>
+        <div class="flex gap-2">
+          <button @click="markAllAtt(true)" class="btn-ghost py-1 px-2.5 text-xs">✓ Todos</button>
+          <button @click="markAllAtt(false)" class="btn-ghost py-1 px-2.5 text-xs">Limpiar</button>
+        </div>
+      </div>
+      <!-- Legend -->
+      <div class="flex items-center gap-4 mb-3 text-xs text-slate-500">
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-blue-500 opacity-70"></span>Ida</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-purple-500 opacity-70"></span>Retorno</span>
+      </div>
+      <div class="space-y-1.5">
+        <template x-for="client in attClientes" :key="client.id">
+          <div class="card p-3">
+            <div class="flex items-center gap-3">
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-semibold text-sm truncate" x-text="client.apellido+', '+client.nombre"></p>
+                <p class="text-slate-600 text-xs" x-text="(client.colegio||'Sin colegio')"></p>
+              </div>
+              <div class="flex items-center gap-4">
+                <label x-show="client.tipoPlan!=='retorno'" class="flex flex-col items-center gap-1 cursor-pointer">
+                  <input type="checkbox" :checked="attData[client.id]?.ida" @change="toggleAtt(client.id,'ida',$event)"
+                         class="w-5 h-5 rounded accent-blue-500 cursor-pointer">
+                  <span class="text-blue-400 text-xs font-semibold">Ida</span>
+                </label>
+                <label x-show="client.tipoPlan!=='ida'" class="flex flex-col items-center gap-1 cursor-pointer">
+                  <input type="checkbox" :checked="attData[client.id]?.retorno" @change="toggleAtt(client.id,'retorno',$event)"
+                         class="w-5 h-5 rounded accent-purple-500 cursor-pointer">
+                  <span class="text-purple-400 text-xs font-semibold">Ret.</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="attClientes.length===0" class="text-center py-12 text-slate-600">No hay clientes activos</div>
+      </div>
+      <button @click="saveAttendance()" class="btn-primary w-full py-3 mt-4 text-base">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar Asistencia
+      </button>
+    </section>
+
+    <!-- ====== ADMIN ====== -->
+    <section x-show="page==='admin'" class="page-anim px-4 lg:px-6 py-4 max-w-2xl mx-auto">
+      <h1 class="text-xl font-extrabold text-white tracking-tight mb-5">Administración</h1>
+
+      <!-- Prices -->
+      <div class="card p-4 mb-4">
+        <p class="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+          <svg class="text-blue-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Precios Base
+        </p>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="section-label block mb-1">Completo</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+              <input type="number" min="0" step="0.5" x-model="config.precioCompleto" @change="saveConfigItem('precioCompleto',config.precioCompleto)" class="input-field pl-6">
+            </div>
+          </div>
+          <div>
+            <label class="section-label block mb-1">Solo Ida</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+              <input type="number" min="0" step="0.5" x-model="config.precioIda" @change="saveConfigItem('precioIda',config.precioIda)" class="input-field pl-6">
+            </div>
+          </div>
+          <div>
+            <label class="section-label block mb-1">Retorno</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+              <input type="number" min="0" step="0.5" x-model="config.precioRetorno" @change="saveConfigItem('precioRetorno',config.precioRetorno)" class="input-field pl-6">
+            </div>
+          </div>
+        </div>
+        <p class="text-slate-600 text-xs mt-2">Los cambios aplican a nuevos pagos generados. Pagos existentes mantienen su monto.</p>
+      </div>
+
+      <!-- Colegios -->
+      <div class="card p-4 mb-4">
+        <p class="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+          <svg class="text-blue-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          Colegios
+        </p>
+        <div class="flex gap-2 mb-3">
+          <input x-model="newColegioName" @keydown.enter="addColegioAdmin()" type="text" placeholder="Nombre del colegio" class="input-field flex-1">
+          <button @click="addColegioAdmin()" class="btn-primary px-4">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+        <div class="space-y-1 max-h-52 overflow-y-auto">
+          <template x-for="col in colegios" :key="col.id">
+            <div class="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-[#0f1e38] group transition-colors">
+              <div class="flex items-center gap-2">
+                <svg class="text-slate-600" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                <span class="text-slate-300 text-sm" x-text="col.nombre"></span>
+              </div>
+              <button @click="confirmDelete('colegio',col)" class="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-red-300">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </div>
+          </template>
+          <p x-show="colegios.length===0" class="text-slate-600 text-sm text-center py-4">No hay colegios</p>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="card p-4 mb-4">
+        <p class="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+          <svg class="text-blue-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Cambiar Contraseña
+        </p>
+        <div class="space-y-2">
+          <input type="password" x-model="newPassword" placeholder="Nueva contraseña (mín. 4 caracteres)" class="input-field">
+          <input type="password" x-model="newPasswordConfirm" @keydown.enter="changePassword()" placeholder="Confirmar contraseña" class="input-field">
+          <button @click="changePassword()" class="btn-primary w-full py-2.5">Actualizar Contraseña</button>
+        </div>
+      </div>
+
+      <!-- Backup & Export -->
+      <div class="card p-4 mb-4">
+        <p class="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+          <svg class="text-blue-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Datos y Exportación
+        </p>
+        <div class="grid grid-cols-2 gap-2">
+          <button @click="backup()" class="btn-ghost flex items-center justify-center gap-1.5 py-2.5 text-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Backup JSON
+          </button>
+          <label class="btn-ghost flex items-center justify-center gap-1.5 py-2.5 text-sm cursor-pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Restaurar
+            <input type="file" accept=".json" @change="restore($event)" class="hidden">
+          </label>
+          <button @click="exportCSV('clientes')" class="btn-ghost flex items-center justify-center gap-1.5 py-2.5 text-sm" style="color:#34d399">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Clientes CSV
+          </button>
+          <button @click="exportCSV('morosos')" class="btn-ghost flex items-center justify-center gap-1.5 py-2.5 text-sm" style="color:#f87171">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Morosos CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- System info -->
+      <div class="card p-4 mb-5">
+        <p class="text-white font-semibold text-sm mb-3">Estado del Sistema</p>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between py-1 border-b border-[#111d32]">
+            <span class="text-slate-500">Total clientes</span>
+            <span class="text-slate-300 font-semibold" x-text="clientes.length"></span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#111d32]">
+            <span class="text-slate-500">Clientes activos</span>
+            <span class="text-slate-300 font-semibold" x-text="clientes.filter(c=>c.estado==='activo').length"></span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#111d32]">
+            <span class="text-slate-500">Pagos registrados</span>
+            <span class="text-slate-300 font-semibold" x-text="totalPagos"></span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#111d32]">
+            <span class="text-slate-500">Registros asistencia</span>
+            <span class="text-slate-300 font-semibold" x-text="totalAsistencias"></span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-slate-500">Versión</span>
+            <span class="text-slate-300 font-semibold">1.0.0</span>
+          </div>
+          <div class="flex justify-between py-1 border-t border-[#111d32] mt-1 pt-2">
+            <span class="text-slate-500">Último guardado</span>
+            <span class="text-emerald-400 font-semibold text-xs" x-text="lastSavedLabel"></span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-slate-500">Respaldo local</span>
+            <span class="text-blue-400 text-xs font-semibold">✓ Activo (auto)</span>
+          </div>
+        </div>
+      </div>
+
+      <button @click="logout()" class="w-full py-3 rounded-xl border border-red-900/40 text-red-400 hover:bg-red-900/15 transition-colors font-semibold text-sm flex items-center justify-center gap-2 mb-8">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar Sesión
+      </button>
+    </section>
+
+  </main>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-[#111d32]" style="background:#090e1d;padding-bottom:env(safe-area-inset-bottom)">
+    <template x-for="item in navItems" :key="item.id">
+      <button @click="navigate(item.id)" :class="['nav-item',page===item.id?'active':'']">
+        <span x-html="item.icon"></span>
+        <span x-text="item.label"></span>
+      </button>
+    </template>
+  </nav>
+
+</div><!-- /main app -->
+
+<!-- ========== MODAL: CLIENT FORM ========== -->
+<div x-show="activeModal==='clientForm'" x-cloak class="modal-backdrop" @click.self="activeModal=null">
+  <div class="modal-box" @click.stop="">
+    <div class="flex items-center justify-between p-5 border-b border-[#111d32] sticky top-0" style="background:#0d1a30;border-radius:20px 20px 0 0;z-index:1">
+      <h2 class="text-lg font-bold text-white" x-text="editingClient?'Editar Cliente':'Nuevo Cliente'"></h2>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1a2e52] transition-colors" style="color:#64748b">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="p-5 space-y-4">
+      <!-- Nombre / Apellido -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="section-label block mb-1.5">Nombre *</label>
+          <input x-model="clientForm.nombre" type="text" placeholder="María" class="input-field">
+        </div>
+        <div>
+          <label class="section-label block mb-1.5">Apellido *</label>
+          <input x-model="clientForm.apellido" type="text" placeholder="García" class="input-field">
+        </div>
+      </div>
+      <!-- Colegio -->
+      <div>
+        <label class="section-label block mb-1.5">Colegio</label>
+        <div x-show="!clientForm.addingNewColegio">
+          <select x-model="clientForm.colegio" @change="clientForm.colegio==='__nuevo__'&&(clientForm.addingNewColegio=true,clientForm.colegio='')" class="input-field">
+            <option value="">Sin colegio / seleccionar...</option>
+            <template x-for="c in colegios" :key="c.id">
+              <option :value="c.nombre" x-text="c.nombre"></option>
+            </template>
+            <option value="__nuevo__">➕ Agregar nuevo colegio...</option>
+          </select>
+        </div>
+        <div x-show="clientForm.addingNewColegio" class="flex gap-2">
+          <input x-model="clientForm.nuevoColegio" type="text" placeholder="Nombre del nuevo colegio" class="input-field flex-1" x-ref="nuevoColegio">
+          <button @click="clientForm.addingNewColegio=false;clientForm.nuevoColegio=''" class="btn-ghost px-3 text-red-400">✕</button>
+        </div>
+      </div>
+      <!-- Grado -->
+      <div>
+        <label class="section-label block mb-1.5">Grado / Curso</label>
+        <input x-model="clientForm.grado" type="text" placeholder="Ej: 3ro Primaria, 1ro Bachillerato..." class="input-field">
+      </div>
+      <!-- Dirección -->
+      <div>
+        <label class="section-label block mb-1.5">Dirección</label>
+        <input x-model="clientForm.direccion" type="text" placeholder="Calle, número, referencia..." class="input-field">
+      </div>
+      <!-- Teléfono -->
+      <div>
+        <label class="section-label block mb-1.5">Teléfono / WhatsApp (opcional)</label>
+        <input x-model="clientForm.telefono" type="tel" placeholder="Ej: 0991234567" class="input-field">
+      </div>
+      <!-- Fechas -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="section-label block mb-1.5">Fecha Inicio *</label>
+          <input x-model="clientForm.fechaInicio" type="date" class="input-field">
+        </div>
+        <div>
+          <label class="section-label block mb-1.5">Fecha Fin (opcional)</label>
+          <input x-model="clientForm.fechaFin" type="date" class="input-field">
+        </div>
+      </div>
+      <!-- Plan -->
+      <div>
+        <label class="section-label block mb-1.5">Tipo de Plan *</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button @click="clientForm.tipoPlan='completo'" :class="['py-2.5 px-3 rounded-xl text-sm font-semibold border transition-all text-left',clientForm.tipoPlan==='completo'?'bg-blue-900/30 text-blue-300 border-blue-700':'border-[#1a2e52] text-slate-500 hover:bg-[#0f1e38]']">
+            <p class="font-bold">Completo</p>
+            <p class="text-xs opacity-70" x-text="'$' + (config.precioCompleto||'30') + '/mes'"></p>
+          </button>
+          <button @click="clientForm.tipoPlan='ida'" :class="['py-2.5 px-3 rounded-xl text-sm font-semibold border transition-all text-left',clientForm.tipoPlan==='ida'?'bg-blue-900/30 text-blue-300 border-blue-700':'border-[#1a2e52] text-slate-500 hover:bg-[#0f1e38]']">
+            <p class="font-bold">Solo Ida</p>
+            <p class="text-xs opacity-70" x-text="'$' + (config.precioIda||'20') + '/mes'"></p>
+          </button>
+          <button @click="clientForm.tipoPlan='retorno'" :class="['py-2.5 px-3 rounded-xl text-sm font-semibold border transition-all text-left',clientForm.tipoPlan==='retorno'?'bg-blue-900/30 text-blue-300 border-blue-700':'border-[#1a2e52] text-slate-500 hover:bg-[#0f1e38]']">
+            <p class="font-bold">Solo Retorno</p>
+            <p class="text-xs opacity-70" x-text="'$' + (config.precioRetorno||'20') + '/mes'"></p>
+          </button>
+          <button @click="clientForm.tipoPlan='personalizado'" :class="['py-2.5 px-3 rounded-xl text-sm font-semibold border transition-all text-left',clientForm.tipoPlan==='personalizado'?'bg-blue-900/30 text-blue-300 border-blue-700':'border-[#1a2e52] text-slate-500 hover:bg-[#0f1e38]']">
+            <p class="font-bold">Personalizado</p>
+            <p class="text-xs opacity-70">Monto libre</p>
+          </button>
+        </div>
+      </div>
+      <!-- Monto personalizado -->
+      <div x-show="clientForm.tipoPlan==='personalizado'">
+        <label class="section-label block mb-1.5">Monto Mensual *</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">$</span>
+          <input x-model="clientForm.montoPersonalizado" type="number" min="0" step="0.5" placeholder="0.00" class="input-field pl-7">
+        </div>
+      </div>
+      <!-- Estado -->
+      <div>
+        <label class="section-label block mb-1.5">Estado</label>
+        <div class="flex gap-2">
+          <button @click="clientForm.estado='activo'" :class="['flex-1 py-2.5 rounded-xl font-semibold text-sm border transition-all',clientForm.estado==='activo'?'bg-emerald-900/25 text-emerald-400 border-emerald-800':'border-[#1a2e52] text-slate-500 hover:bg-[#0f1e38]']">✓ Activo</button>
+          <button @click="clientForm.estado='inactivo'" :class="['flex-1 py-2.5 rounded-xl font-semibold text-sm border transition-all',clientForm.estado==='inactivo'?'bg-slate-700/30 text-slate-300 border-slate-600':'border-[#1a2e52] text-slate-500 hover:bg-[#0f1e38]']">— Inactivo</button>
+        </div>
+      </div>
+      <!-- Notas -->
+      <div>
+        <label class="section-label block mb-1.5">Notas (opcional)</label>
+        <textarea x-model="clientForm.notas" rows="2" placeholder="Observaciones, instrucciones especiales..." class="input-field"></textarea>
+      </div>
+    </div>
+    <div class="flex gap-3 px-5 pb-6 sticky bottom-0" style="background:#0d1a30;border-top:1px solid #111d32;padding-top:1rem">
+      <button @click="activeModal=null" class="btn-ghost flex-1 py-3">Cancelar</button>
+      <button @click="saveClient()" class="btn-primary flex-1 py-3 text-base">
+        <span x-text="editingClient?'Actualizar':'Agregar Cliente'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL: CLIENT DETAIL ========== -->
+<div x-show="activeModal==='clientDetail' && selectedClient" x-cloak class="modal-backdrop" @click.self="activeModal=null">
+  <div class="modal-box" @click.stop="">
+    <div class="flex items-start justify-between p-5 border-b border-[#111d32] sticky top-0" style="background:#0d1a30;border-radius:20px 20px 0 0;z-index:1">
+      <div>
+        <h2 class="text-lg font-bold text-white" x-text="(selectedClient?.apellido||'') + ', ' + (selectedClient?.nombre||'')"></h2>
+        <p class="text-slate-500 text-xs mt-0.5" x-text="(selectedClient?.colegio||'Sin colegio') + (selectedClient?.grado ? ' · ' + selectedClient.grado : '')"></p>
+      </div>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1a2e52]" style="color:#64748b">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="p-5">
+      <!-- Stats -->
+      <div class="grid grid-cols-2 gap-2.5 mb-4">
+        <div class="rounded-xl p-3" style="background:#0a1220;border:1px solid #1a2e52">
+          <p class="text-slate-500 text-xs mb-0.5">Plan</p>
+          <p class="text-white text-sm font-bold" x-text="getPlanLabel(selectedClient?.tipoPlan)"></p>
+        </div>
+        <div class="rounded-xl p-3" style="background:#0a1220;border:1px solid #1a2e52">
+          <p class="text-slate-500 text-xs mb-0.5">Monto Mensual</p>
+          <p class="text-white text-sm font-bold" x-text="'$'+formatNum(getClientMonto(selectedClient||{}))"></p>
+        </div>
+        <div class="rounded-xl p-3" style="background:#0a1220;border:1px solid #1a2e52">
+          <p class="text-slate-500 text-xs mb-0.5">Estado</p>
+          <span :class="selectedClient?.estado==='activo'?'badge-green':'badge-gray'" x-text="selectedClient?.estado==='activo'?'Activo':'Inactivo'"></span>
+        </div>
+        <div class="rounded-xl p-3" style="background:#0a1220;border:1px solid #1a2e52">
+          <p class="text-slate-500 text-xs mb-0.5">Deuda Total</p>
+          <p :class="(debtMap[selectedClient?.id]||0)>0?'text-red-400':'text-emerald-400'" class="text-sm font-bold"
+             x-text="(debtMap[selectedClient?.id]||0)>0?'$'+formatNum(debtMap[selectedClient?.id]):'Al día ✓'"></p>
+        </div>
+      </div>
+      <!-- Contact -->
+      <div class="space-y-2 mb-4">
+        <div x-show="selectedClient?.telefono" class="flex items-center gap-2 text-sm">
+          <svg style="color:#475569;flex-shrink:0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.65 4.9 2 2 0 0 1 3.62 2.68h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l.82-.82a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+          <a :href="'tel:'+selectedClient?.telefono" class="text-blue-400 hover:underline font-medium" x-text="selectedClient?.telefono"></a>
+        </div>
+        <div x-show="selectedClient?.direccion" class="flex items-start gap-2 text-sm">
+          <svg style="color:#475569;flex-shrink:0;margin-top:2px" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="text-slate-400" x-text="selectedClient?.direccion"></span>
+        </div>
+        <div x-show="selectedClient?.fechaInicio" class="flex items-center gap-2 text-sm">
+          <svg style="color:#475569;flex-shrink:0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span class="text-slate-400">Desde: <span class="text-slate-300 font-medium" x-text="formatDateDisplay(selectedClient?.fechaInicio)"></span></span>
+        </div>
+        <div x-show="selectedClient?.notas" class="flex items-start gap-2 text-sm mt-1 p-2.5 rounded-lg" style="background:#0a1220">
+          <svg style="color:#475569;flex-shrink:0;margin-top:2px" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+          <span class="text-slate-400 text-xs" x-text="selectedClient?.notas"></span>
+        </div>
+      </div>
+      <!-- Actions -->
+      <div class="flex gap-2 mb-5">
+        <a :href="'https://wa.me/'+cleanPhone(selectedClient?.telefono||'')" target="_blank"
+           class="flex-1 btn-ghost py-2.5 text-sm font-semibold" style="color:#34d399">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          WhatsApp
+        </a>
+        <button @click="activeModal=null;$nextTick(()=>openEditClient(selectedClient))" class="flex-1 btn-ghost py-2.5 text-sm font-semibold">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar
+        </button>
+        <button @click="activeModal=null;$nextTick(()=>confirmDelete('client',selectedClient))" class="btn-ghost p-2.5" style="color:#f87171">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+      <!-- Payment history -->
+      <div>
+        <p class="section-label mb-2">Historial de Pagos</p>
+        <div class="space-y-1.5 max-h-52 overflow-y-auto">
+          <template x-for="pago in clientPayments" :key="pago.id">
+            <div class="flex items-center justify-between py-2 px-3 rounded-xl" style="background:#0a1220;border:1px solid #111d32">
+              <div>
+                <p class="text-white text-xs font-bold" x-text="monthName(pago.mes)+' '+pago.anio"></p>
+                <p x-show="pago.fechaPago" class="text-slate-600 text-xs" x-text="'Cobrado: '+formatDateDisplay(pago.fechaPago)"></p>
+                <p x-show="!pago.fechaPago" class="text-slate-600 text-xs">Sin pago registrado</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-white text-xs font-extrabold" x-text="'$'+formatNum(pago.monto)"></span>
+                <span :class="pago.estado==='pagado'?'badge-green':pago.estado==='atrasado'?'badge-red':'badge-yellow'"
+                      x-text="pago.estado==='pagado'?'✓':pago.estado==='atrasado'?'!':'⏱'"></span>
+              </div>
+            </div>
+          </template>
+          <p x-show="clientPayments.length===0" class="text-slate-600 text-sm text-center py-4">Sin historial de pagos</p>
+        </div>
+      </div>
+      <!-- Attendance -->
+      <div class="mt-4" x-show="clientAttendance.length>0">
+        <p class="section-label mb-2">Asistencia Reciente</p>
+        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+          <template x-for="att in clientAttendance.slice(0,20)" :key="att.id">
+            <div class="rounded-lg px-2 py-1 text-xs flex items-center gap-1.5" style="background:#0a1220;border:1px solid #111d32">
+              <span class="text-slate-500" x-text="att.fecha.slice(5)"></span>
+              <span x-show="att.asistioIda" class="text-blue-400 font-bold">I</span>
+              <span x-show="att.asistioRetorno" class="text-purple-400 font-bold">R</span>
+              <span x-show="!att.asistioIda&&!att.asistioRetorno" class="text-slate-700">—</span>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL: PAY ========== -->
+<div x-show="activeModal==='payModal'" x-cloak class="modal-backdrop" @click.self="activeModal=null">
+  <div class="modal-box max-w-sm" @click.stop="">
+    <div class="flex items-center justify-between p-5 border-b border-[#111d32]">
+      <h2 class="text-lg font-bold text-white">Registrar Pago</h2>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1a2e52]" style="color:#64748b">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div class="rounded-xl p-3" style="background:#0a1220;border:1px solid #1a2e52">
+        <p class="text-white font-bold" x-text="(payModal.cliente?.apellido||'')+', '+(payModal.cliente?.nombre||'')"></p>
+        <p class="text-slate-500 text-sm" x-text="monthName(payModal.pago?.mes)+' '+payModal.pago?.anio+' · Monto: $'+(payModal.pago?.monto||0)"></p>
+      </div>
+      <div>
+        <label class="section-label block mb-1.5">Monto Recibido *</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+          <input x-model="payModal.monto" type="number" step="0.5" min="0" class="input-field pl-7 text-lg font-bold" placeholder="0.00">
+        </div>
+      </div>
+      <div>
+        <label class="section-label block mb-1.5">Fecha de Pago</label>
+        <input x-model="payModal.fecha" type="date" :max="todayStr" class="input-field">
+      </div>
+      <div>
+        <label class="section-label block mb-1.5">Notas</label>
+        <input x-model="payModal.notas" type="text" placeholder="Ej: Efectivo, transferencia..." class="input-field">
+      </div>
+    </div>
+    <div class="flex gap-3 px-5 pb-5">
+      <button @click="activeModal=null" class="btn-ghost flex-1 py-3">Cancelar</button>
+      <button @click="confirmPayment()" class="btn-primary flex-1 py-3 text-base">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Confirmar Pago
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL: DELETE CONFIRM ========== -->
+<div x-show="activeModal==='deleteConfirm'" x-cloak class="modal-backdrop" @click.self="activeModal=null">
+  <div class="modal-box max-w-sm" @click.stop="">
+    <div class="p-6 text-center">
+      <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style="background:#2d0a0a;border:2px solid #7f1d1d">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </div>
+      <h2 class="text-lg font-bold text-white mb-2">¿Eliminar?</h2>
+      <p class="text-slate-400 text-sm mb-6 leading-relaxed" x-text="deleteMessage"></p>
+      <div class="flex gap-3">
+        <button @click="activeModal=null;deleteTarget=null" class="btn-ghost flex-1 py-3">Cancelar</button>
+        <button @click="executeDelete()" class="flex-1 py-3 rounded-xl font-bold text-white transition-colors text-sm" style="background:#dc2626" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+          Sí, eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TOASTS ========== -->
+<div class="fixed bottom-24 lg:bottom-6 right-4 z-[100] space-y-2 pointer-events-none" style="max-width:340px">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="toast-item pointer-events-auto"
+         :style="'border-left:3px solid '+(t.type==='success'?'#34d399':t.type==='error'?'#f87171':'#fbbf24')">
+      <svg x-show="t.type==='success'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
+      <svg x-show="t.type==='error'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <svg x-show="t.type==='info'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span class="text-slate-200 text-sm" x-text="t.message"></span>
+    </div>
+  </template>
+</div>
+
+<!-- ========== JAVASCRIPT ========== -->
+<script>
+// DB is initialized lazily inside initDB()
+let db = null;
+
+function app() {
+  return {
+    isLoading:true, isAuthenticated:false, page:'dashboard', initError:'', lastSavedLabel:'Calculando...',
+    showLoginPass:false, loginPass:'', loginError:'', loginLoading:false,
+    activeModal:null,
+    clientes:[], filteredClientes:[], clientSearch:'',
+    clientFilters:{estado:'all',colegio:'',pago:'all'},
+    clientSort:{field:'apellido',dir:'asc'},
+    clientPage:1, clientsPerPage:50, isLoadingClients:false, debtMap:{},
+    editingClient:null,
+    clientForm:{nombre:'',apellido:'',colegio:'',grado:'',direccion:'',telefono:'',
+      fechaInicio:'',fechaFin:'',estado:'activo',tipoPlan:'completo',
+      montoPersonalizado:'',notas:'',addingNewColegio:false,nuevoColegio:''},
+    billingMes:new Date().getMonth()+1, billingAnio:new Date().getFullYear(),
+    billingData:[], billingFilter:'all',
+    attDate:new Date().toISOString().split('T')[0], attClientes:[], attData:{},
+    selectedClient:null, clientPayments:[], clientAttendance:[],
+    colegios:[], newColegioName:'',
+    config:{password:'3301',precioCompleto:'30',precioIda:'20',precioRetorno:'20'},
+    newPassword:'', newPasswordConfirm:'',
+    stats:{totalActivos:0,ingresosMes:0,esperadoMes:0,deudaTotal:0,tasaMorosidad:0,clientesMorosos:0},
+    dashboardColegios:[], dashboardIngresos:[], morososList:[],
+    totalPagos:0, totalAsistencias:0,
+    toasts:[], _toastId:0, _searchTimeout:null,
+    _chartColegios:null, _chartIngresos:null,
+    payModal:{pago:null,cliente:null,monto:'',fecha:new Date().toISOString().split('T')[0],notas:''},
+    deleteTarget:null, deleteType:null, deleteMessage:'',
+    todayStr:new Date().toISOString().split('T')[0],
+
+    navItems:[
+      {id:'dashboard',label:'Inicio',icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'},
+      {id:'clients',label:'Clientes',icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
+      {id:'billing',label:'Pagos',icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>'},
+      {id:'attendance',label:'Asistencia',icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg>'},
+      {id:'admin',label:'Admin',icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34L5.5 4.83A10 10 0 0 0 3.34 17l1.49 1.49A10 10 0 0 0 19.07 19.07L20.56 17.58A10 10 0 0 0 20.66 6.99Z"/></svg>'},
+    ],
+
+    get pagedClientes(){const s=(this.clientPage-1)*this.clientsPerPage;return this.filteredClientes.slice(s,s+this.clientsPerPage);},
+    get isAllFilter(){return this.clientFilters.estado==='all'&&this.clientFilters.pago==='all'&&!this.clientFilters.colegio;},
+    get billingSummary(){const s={cobrado:0,pendiente:0,atrasado:0};this.billingData.forEach(i=>{if(i.pago.estado==='pagado')s.cobrado+=i.pago.monto;else if(i.pago.estado==='atrasado')s.atrasado+=i.pago.monto;else s.pendiente+=i.pago.monto;});return s;},
+    get filteredBillingData(){if(this.billingFilter==='all')return this.billingData;return this.billingData.filter(i=>i.pago.estado===this.billingFilter);},
+    get attSummary(){let ti=0,tr=0,au=0;this.attClientes.forEach(c=>{const d=this.attData[c.id];if(d?.ida)ti++;if(d?.retorno)tr++;if(!d?.ida&&!d?.retorno)au++;});return{totalIda:ti,totalRetorno:tr,ausentes:au};},
+
+    async init(){
+      this.isLoading=true;
+      try{
+        await this.initDB();
+        // Safety: recover from localStorage if IndexedDB was somehow cleared
+        const recovered=await this.recoverFromMirror();
+        if(recovered)this.showToast('Datos recuperados del respaldo automático ✓','info');
+        if(sessionStorage.getItem('rutapro_auth')==='true'){
+          this.isAuthenticated=true;
+          await this.loadConfig();await this.loadColegios();await this.loadClientes();
+          await this.generatePendingPayments();await this.loadDashboardData();
+          this.page='dashboard';
+        }else{this.page='login';}
+      }catch(e){
+        console.error('Init error:',e);
+        this.initError=e.message||'Error al inicializar';
+      }
+      finally{this.isLoading=false;}
+      this.$watch('page',p=>{if(p==='dashboard')this.$nextTick(()=>this.renderCharts());});
+      this.$watch('clientSearch',()=>{clearTimeout(this._searchTimeout);this._searchTimeout=setTimeout(()=>{this.clientPage=1;this.applyClientFilters();},250);});
+      this.$watch('clientFilters',()=>{this.clientPage=1;this.applyClientFilters();},{deep:true});
+      this.setupPWA();
+      this.$nextTick(()=>this.renderCharts());
+      // Load last saved time
+      const ls=localStorage.getItem('rutapro_lastSave');
+      if(ls){try{this.lastSavedLabel=new Date(ls).toLocaleString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){}}
+    },
+
+    async initDB(){
+      if(typeof Dexie==='undefined') throw new Error('Dexie.js no cargó. Verifica conexión a internet.');
+      db = new Dexie('RutaProDB');
+      db.version(1).stores({
+        clientes:'++id,nombre,apellido,colegio,estado,tipoPlan,createdAt',
+        colegios:'++id,&nombre',
+        pagos:'++id,clienteId,mes,anio,estado,createdAt,[clienteId+mes+anio],[mes+anio]',
+        asistencia:'++id,clienteId,fecha,[clienteId+fecha]',
+        config:'++id,&clave'
+      });
+      // Open DB explicitly before any operations
+      await db.open();
+      // Seed defaults — each one individually with full error protection
+      const defs=[
+        {clave:'password',valor:'3301'},
+        {clave:'precioCompleto',valor:'30'},
+        {clave:'precioIda',valor:'20'},
+        {clave:'precioRetorno',valor:'20'}
+      ];
+      for(const def of defs){
+        try{
+          const count=await db.config.where('clave').equals(def.clave).count();
+          if(count===0) await db.config.add(def);
+        }catch(ignore){ /* already exists or constraint — skip safely */ }
+      }
+    },
+
+    async login(){
+      if(!this.loginPass){this.loginError='Ingresa la contraseña';return;}
+      this.loginLoading=true;this.loginError='';
+      await new Promise(r=>setTimeout(r,350));
+      const saved=await db.config.get({clave:'password'});
+      if(this.loginPass===(saved?saved.valor:'3301')){
+        sessionStorage.setItem('rutapro_auth','true');this.isAuthenticated=true;
+        await this.loadConfig();await this.loadColegios();await this.loadClientes();
+        await this.generatePendingPayments();await this.loadDashboardData();
+        this.page='dashboard';this.loginPass='';
+        this.$nextTick(()=>this.renderCharts());
+      }else{this.loginError='Contraseña incorrecta';}
+      this.loginLoading=false;
+    },
+
+    logout(){sessionStorage.removeItem('rutapro_auth');this.isAuthenticated=false;this.page='login';this.loginPass='';},
+
+    async navigate(p){
+      this.page=p;
+      if(p==='billing')await this.loadBillingData();
+      if(p==='attendance')await this.loadAttendanceData();
+      if(p==='dashboard'){await this.loadDashboardData();this.$nextTick(()=>this.renderCharts());}
+      if(p==='admin'){this.totalPagos=await db.pagos.count();this.totalAsistencias=await db.asistencia.count();}
+    },
+
+    async loadConfig(){const arr=await db.config.toArray();arr.forEach(c=>{this.config[c.clave]=c.valor;});},
+    async saveConfigItem(clave,valor){
+      const ex=await db.config.get({clave});
+      if(ex)await db.config.update(ex.id,{valor:String(valor)});
+      else await db.config.add({clave,valor:String(valor)});
+      this.config[clave]=String(valor);
+    },
+    async changePassword(){
+      if(!this.newPassword){this.showToast('Ingresa la nueva contraseña','error');return;}
+      if(this.newPassword!==this.newPasswordConfirm){this.showToast('Las contraseñas no coinciden','error');return;}
+      if(this.newPassword.length<4){this.showToast('Mínimo 4 caracteres','error');return;}
+      await this.saveConfigItem('password',this.newPassword);
+      this.newPassword='';this.newPasswordConfirm='';
+      this.showToast('Contraseña actualizada','success');
+    },
+
+    async loadColegios(){this.colegios=await db.colegios.orderBy('nombre').toArray();},
+    async addColegio(nombre){
+      const n=(nombre||'').trim();if(!n)return;
+      const ex=await db.colegios.get({nombre:n});
+      if(!ex){await db.colegios.add({nombre:n});await this.loadColegios();}
+    },
+    async addColegioAdmin(){
+      if(!this.newColegioName.trim())return;
+      await this.addColegio(this.newColegioName);
+      this.showToast('Colegio agregado','success');
+      this.newColegioName='';
+    },
+
+    async loadClientes(){
+      this.isLoadingClients=true;
+      this.clientes=await db.clientes.orderBy('apellido').toArray();
+      await this.buildDebtMap();this.applyClientFilters();
+      this.isLoadingClients=false;
+    },
+    async buildDebtMap(){
+      const pendientes=await db.pagos.where('estado').anyOf(['pendiente','atrasado']).toArray();
+      const map={};pendientes.forEach(p=>{map[p.clienteId]=(map[p.clienteId]||0)+p.monto;});
+      this.debtMap=map;
+    },
+    applyClientFilters(){
+      let r=[...this.clientes];
+      const q=this.clientSearch.toLowerCase().trim();
+      if(q)r=r.filter(c=>`${c.nombre} ${c.apellido}`.toLowerCase().includes(q)||(c.colegio||'').toLowerCase().includes(q)||(c.telefono||'').includes(q)||(c.grado||'').toLowerCase().includes(q)||(c.direccion||'').toLowerCase().includes(q));
+      if(this.clientFilters.estado!=='all')r=r.filter(c=>c.estado===this.clientFilters.estado);
+      if(this.clientFilters.colegio)r=r.filter(c=>c.colegio===this.clientFilters.colegio);
+      if(this.clientFilters.pago==='atrasado')r=r.filter(c=>(this.debtMap[c.id]||0)>0);
+      if(this.clientFilters.pago==='aldia')r=r.filter(c=>!(this.debtMap[c.id]||0));
+      r.sort((a,b)=>{const f=this.clientSort.field;const av=(a[f]||'').toString().toLowerCase();const bv=(b[f]||'').toString().toLowerCase();return this.clientSort.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av);});
+      this.filteredClientes=r;
+    },
+    resetFilters(){this.clientFilters={estado:'all',colegio:'',pago:'all'};this.clientSearch='';},
+    setFilter(type,val){
+      if(type==='estado'){this.clientFilters.estado=val;this.clientFilters.pago='all';}
+      if(type==='pago'){this.clientFilters.pago=val;this.clientFilters.estado='all';}
+      this.clientFilters.colegio='';
+    },
+    setColegioFilter(nombre){
+      this.clientFilters.colegio=this.clientFilters.colegio===nombre?'':nombre;
+      this.clientFilters.estado='all';this.clientFilters.pago='all';
+    },
+    sortClients(field){
+      if(this.clientSort.field===field)this.clientSort.dir=this.clientSort.dir==='asc'?'desc':'asc';
+      else{this.clientSort.field=field;this.clientSort.dir='asc';}
+      this.applyClientFilters();
+    },
+
+    openAddClient(){
+      this.editingClient=null;
+      this.clientForm={nombre:'',apellido:'',colegio:'',grado:'',direccion:'',telefono:'',
+        fechaInicio:new Date().toISOString().split('T')[0],fechaFin:'',estado:'activo',
+        tipoPlan:'completo',montoPersonalizado:'',notas:'',addingNewColegio:false,nuevoColegio:''};
+      this.activeModal='clientForm';
+    },
+    openEditClient(c){
+      this.editingClient=c;
+      this.clientForm={nombre:c.nombre||'',apellido:c.apellido||'',colegio:c.colegio||'',
+        grado:c.grado||'',direccion:c.direccion||'',telefono:c.telefono||'',
+        fechaInicio:c.fechaInicio||'',fechaFin:c.fechaFin||'',estado:c.estado||'activo',
+        tipoPlan:c.tipoPlan||'completo',montoPersonalizado:c.montoPersonalizado||'',
+        notas:c.notas||'',addingNewColegio:false,nuevoColegio:''};
+      this.activeModal='clientForm';
+    },
+
+    async saveClient(){
+      if(!this.clientForm.nombre.trim()){this.showToast('El nombre es requerido','error');return;}
+      if(!this.clientForm.apellido.trim()){this.showToast('El apellido es requerido','error');return;}
+      if(!this.clientForm.fechaInicio){this.showToast('La fecha de inicio es requerida','error');return;}
+      if(this.clientForm.tipoPlan==='personalizado'&&!this.clientForm.montoPersonalizado){this.showToast('Ingresa el monto personalizado','error');return;}
+      if(this.clientForm.addingNewColegio&&this.clientForm.nuevoColegio.trim()){
+        this.clientForm.colegio=this.clientForm.nuevoColegio.trim();
+        await this.addColegio(this.clientForm.colegio);
+      }
+      const data={
+        nombre:this.clientForm.nombre.trim(),apellido:this.clientForm.apellido.trim(),
+        colegio:this.clientForm.colegio||'',grado:this.clientForm.grado||'',
+        direccion:this.clientForm.direccion||'',telefono:this.clientForm.telefono.trim(),
+        fechaInicio:this.clientForm.fechaInicio,fechaFin:this.clientForm.fechaFin||null,
+        estado:this.clientForm.estado,tipoPlan:this.clientForm.tipoPlan,
+        montoPersonalizado:this.clientForm.tipoPlan==='personalizado'?parseFloat(this.clientForm.montoPersonalizado):null,
+        notas:this.clientForm.notas||'',updatedAt:new Date()
+      };
+      try{
+        if(this.editingClient){
+          const oldClient=this.editingClient;
+          await db.clientes.update(oldClient.id,data);
+          const verify=await db.clientes.get(oldClient.id);
+          if(!verify)throw new Error('No se pudo verificar el guardado');
+          // Recalculate monto for ALL unpaid payments when plan or custom amount changed
+          const planChanged=oldClient.tipoPlan!==data.tipoPlan||
+            String(oldClient.montoPersonalizado)!==String(data.montoPersonalizado);
+          if(planChanged){
+            const newMonto=this.getClientMonto(data);
+            const unpaid=await db.pagos.where('clienteId').equals(oldClient.id)
+              .and(p=>p.estado!=='pagado').toArray();
+            for(const p of unpaid){await db.pagos.update(p.id,{monto:newMonto});}
+          }
+          // Generate any new payment months if fechaInicio was moved earlier
+          await this.generatePaymentsForClient(oldClient.id,data);
+          this.showToast('Cliente actualizado y guardado ✓','success');
+        }else{
+          data.createdAt=new Date();
+          const id=await db.clientes.add(data);
+          const verify=await db.clientes.get(id);
+          if(!verify)throw new Error('No se pudo verificar el guardado');
+          await this.generatePaymentsForClient(id,data);
+          this.showToast('Cliente guardado correctamente ✓','success');
+        }
+        await this.mirrorBackup();
+      }catch(saveErr){
+        this.showToast('ERROR AL GUARDAR: '+saveErr.message,'error');
+        console.error('Save error:',saveErr);
+        return;
+      }
+      this.activeModal=null;
+      await this.loadClientes();
+      await this.buildDebtMap();
+      await this.loadDashboardData();
+      if(this.page==='billing')await this.loadBillingData();
+    },
+
+    confirmDelete(type,target){
+      this.deleteType=type;this.deleteTarget=target;
+      if(type==='client')this.deleteMessage=`Se eliminará a "${target.apellido}, ${target.nombre}" con todo su historial de pagos y asistencia. Esta acción no se puede deshacer.`;
+      if(type==='colegio')this.deleteMessage=`Se eliminará el colegio "${target.nombre}". Los clientes asignados quedarán sin colegio.`;
+      this.activeModal='deleteConfirm';
+    },
+    async executeDelete(){
+      if(this.deleteType==='client'&&this.deleteTarget){
+        const id=this.deleteTarget.id;
+        await db.clientes.delete(id);await db.pagos.where('clienteId').equals(id).delete();await db.asistencia.where('clienteId').equals(id).delete();
+        await this.loadClientes();await this.loadDashboardData();
+        await this.mirrorBackup();
+        this.showToast('Cliente eliminado','success');
+      }
+      if(this.deleteType==='colegio'&&this.deleteTarget){
+        await db.colegios.delete(this.deleteTarget.id);await this.loadColegios();
+        this.showToast('Colegio eliminado','success');
+      }
+      this.activeModal=null;this.deleteTarget=null;
+    },
+
+    async viewClientDetail(client){
+      this.selectedClient=client;
+      const pagos=await db.pagos.where('clienteId').equals(client.id).toArray();
+      this.clientPayments=pagos.sort((a,b)=>(b.anio*12+b.mes)-(a.anio*12+a.mes));
+      const att=await db.asistencia.where('clienteId').equals(client.id).toArray();
+      this.clientAttendance=att.sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,30);
+      this.activeModal='clientDetail';
+    },
+
+    getClientMonto(client){
+      if(!client)return 0;
+      const c=this.config;
+      switch(client.tipoPlan){
+        case 'completo':return parseFloat(c.precioCompleto||30);
+        case 'ida':return parseFloat(c.precioIda||20);
+        case 'retorno':return parseFloat(c.precioRetorno||20);
+        case 'personalizado':return parseFloat(client.montoPersonalizado||0);
+        default:return parseFloat(c.precioCompleto||30);
+      }
+    },
+
+    async generatePaymentsForClient(clientId,clientData){
+      if(!clientData.fechaInicio)return;
+      const start=new Date(clientData.fechaInicio+'T12:00:00');
+      const now=new Date();
+      let mes=start.getMonth()+1,anio=start.getFullYear();
+      const cm=now.getMonth()+1,cy=now.getFullYear();
+      const monto=this.getClientMonto(clientData);
+      while(anio<cy||(anio===cy&&mes<=cm)){
+        const ex=await db.pagos.where('[clienteId+mes+anio]').equals([clientId,mes,anio]).count();
+        if(ex===0){
+          const isPast=anio<cy||(anio===cy&&mes<cm);
+          await db.pagos.add({clienteId:clientId,mes,anio,monto,fechaPago:null,estado:isPast?'atrasado':'pendiente',notas:'',createdAt:new Date()});
+        }
+        mes++;if(mes>12){mes=1;anio++;}
+      }
+    },
+    async generatePendingPayments(){
+      const now=new Date();const cm=now.getMonth()+1;const cy=now.getFullYear();
+      const active=await db.clientes.where('estado').equals('activo').toArray();
+      for(const c of active){
+        const newMonto=this.getClientMonto(c);
+        const ex=await db.pagos.where('[clienteId+mes+anio]').equals([c.id,cm,cy]).first();
+        if(!ex){
+          await db.pagos.add({clienteId:c.id,mes:cm,anio:cy,monto:newMonto,fechaPago:null,estado:'pendiente',notas:'',createdAt:new Date()});
+        }else if(ex.estado!=='pagado'&&ex.monto!==newMonto){
+          // Plan changed between sessions — sync the amount
+          await db.pagos.update(ex.id,{monto:newMonto});
+        }
+      }
+      // Mark all past-due pending payments as atrasado and sync their montos too
+      const allClientes=await db.clientes.toArray();
+      const montoMap={};allClientes.forEach(c=>{montoMap[c.id]=this.getClientMonto(c);});
+      const pending=await db.pagos.where('estado').equals('pendiente').toArray();
+      for(const p of pending){
+        const updates={};
+        if(p.anio<cy||(p.anio===cy&&p.mes<cm))updates.estado='atrasado';
+        if(montoMap[p.clienteId]!==undefined&&p.monto!==montoMap[p.clienteId])updates.monto=montoMap[p.clienteId];
+        if(Object.keys(updates).length)await db.pagos.update(p.id,updates);
+      }
+    },
+
+    async loadBillingData(){
+      const pagos=await db.pagos.where('[mes+anio]').equals([this.billingMes,this.billingAnio]).toArray();
+      const cmap={};this.clientes.forEach(c=>{cmap[c.id]=c;});
+      const result=[];
+      for(const pago of pagos){
+        const cliente=cmap[pago.clienteId];if(!cliente)continue;
+        const deudaTotal=this.debtMap[pago.clienteId]||0;
+        result.push({pago,cliente,deudaTotal});
+      }
+      result.sort((a,b)=>`${a.cliente.apellido}${a.cliente.nombre}`.localeCompare(`${b.cliente.apellido}${b.cliente.nombre}`));
+      this.billingData=result;
+    },
+    prevBillingMonth(){if(this.billingMes===1){this.billingMes=12;this.billingAnio--;}else this.billingMes--;this.loadBillingData();},
+    nextBillingMonth(){if(this.billingMes===12){this.billingMes=1;this.billingAnio++;}else this.billingMes++;this.loadBillingData();},
+    openPayModal(pago,cliente){
+      this.payModal={pago,cliente,monto:String(pago.monto),fecha:new Date().toISOString().split('T')[0],notas:''};
+      this.activeModal='payModal';
+    },
+    async confirmPayment(){
+      if(!this.payModal.monto||parseFloat(this.payModal.monto)<=0){this.showToast('Ingresa el monto','error');return;}
+      try{
+        await db.pagos.update(this.payModal.pago.id,{estado:'pagado',fechaPago:new Date(this.payModal.fecha+'T12:00:00'),monto:parseFloat(this.payModal.monto),notas:this.payModal.notas});
+        const verify=await db.pagos.get(this.payModal.pago.id);
+        if(!verify||verify.estado!=='pagado')throw new Error('No se verificó el pago');
+        await this.mirrorBackup();
+        this.activeModal=null;await this.buildDebtMap();await this.loadBillingData();await this.loadDashboardData();
+        this.showToast('Pago registrado y guardado ✓','success');
+      }catch(e){this.showToast('ERROR al registrar pago: '+e.message,'error');console.error(e);}
+    },
+    async unpayPayment(pago){
+      await db.pagos.update(pago.id,{estado:'pendiente',fechaPago:null,notas:''});
+      await this.buildDebtMap();await this.loadBillingData();await this.loadDashboardData();
+      this.showToast('Pago revertido','info');
+    },
+
+    async loadAttendanceData(){
+      this.attClientes=this.clientes.filter(c=>c.estado==='activo');
+      const existing=await db.asistencia.where('fecha').equals(this.attDate).toArray();
+      const map={};existing.forEach(a=>{map[a.clienteId]={ida:a.asistioIda,retorno:a.asistioRetorno,id:a.id};});
+      this.attData=map;
+    },
+    toggleAtt(clientId,type,event){
+      if(!this.attData[clientId])this.attData[clientId]={ida:false,retorno:false};
+      this.attData[clientId][type]=event.target.checked;
+      this.attData={...this.attData};
+    },
+    markAllAtt(val){const m={};this.attClientes.forEach(c=>{m[c.id]={ida:val,retorno:val};});this.attData=m;},
+    changeAttDate(delta){
+      const d=new Date(this.attDate+'T12:00:00');d.setDate(d.getDate()+delta);
+      const nd=d.toISOString().split('T')[0];
+      if(nd<=this.todayStr){this.attDate=nd;this.loadAttendanceData();}
+    },
+    async saveAttendance(){
+      const existing=await db.asistencia.where('fecha').equals(this.attDate).toArray();
+      const exMap={};existing.forEach(a=>{exMap[a.clienteId]=a;});
+      for(const[cIdStr,data]of Object.entries(this.attData)){
+        const cId=parseInt(cIdStr);const ex=exMap[cId];
+        if(ex)await db.asistencia.update(ex.id,{asistioIda:!!data.ida,asistioRetorno:!!data.retorno});
+        else if(data.ida||data.retorno)await db.asistencia.add({clienteId:cId,fecha:this.attDate,asistioIda:!!data.ida,asistioRetorno:!!data.retorno});
+      }
+      this.showToast('Asistencia guardada','success');
+  
+    },
+
+    async loadDashboardData(){
+      const now=new Date();const cm=now.getMonth()+1;const cy=now.getFullYear();
+      const activos=this.clientes.filter(c=>c.estado==='activo');
+      const pagadosMes=await db.pagos.where('[mes+anio]').equals([cm,cy]).and(p=>p.estado==='pagado').toArray();
+      const ingresosMes=pagadosMes.reduce((s,p)=>s+p.monto,0);
+      const esperadoMes=activos.reduce((s,c)=>s+this.getClientMonto(c),0);
+      let deudaTotal=0,morosos=0;const morososList=[];
+      for(const c of activos){
+        const debt=this.debtMap[c.id]||0;
+        if(debt>0){
+          morosos++;deudaTotal+=debt;
+          const unpaid=await db.pagos.where('clienteId').equals(c.id).and(p=>p.estado!=='pagado').count();
+          morososList.push({...c,deuda:debt,mesesDeuda:unpaid});
+        }
+      }
+      morososList.sort((a,b)=>b.deuda-a.deuda);
+      this.morososList=morososList;
+      this.stats={totalActivos:activos.length,ingresosMes:Math.round(ingresosMes*100)/100,
+        esperadoMes:Math.round(esperadoMes*100)/100,deudaTotal:Math.round(deudaTotal*100)/100,
+        tasaMorosidad:activos.length?Math.round(morosos/activos.length*100):0,clientesMorosos:morosos};
+      const cmap={};
+      activos.forEach(c=>{const k=c.colegio||'Sin colegio';if(!cmap[k])cmap[k]={nombre:k,total:0,monto:0};cmap[k].total++;cmap[k].monto+=this.getClientMonto(c);});
+      this.dashboardColegios=Object.values(cmap).sort((a,b)=>b.total-a.total);
+      const meses=[];let m=cm,y=cy;
+      for(let i=0;i<6;i++){
+        const paid=await db.pagos.where('[mes+anio]').equals([m,y]).and(p=>p.estado==='pagado').toArray();
+        meses.unshift({label:this.monthShort(m)+' '+String(y).slice(2),total:paid.reduce((s,p)=>s+p.monto,0)});
+        m--;if(m===0){m=12;y--;}
+      }
+      this.dashboardIngresos=meses;
+    },
+
+    renderCharts(){
+      this.$nextTick(()=>{
+        try{
+          const ctx1=document.getElementById('chartColegios');
+          if(ctx1&&this.dashboardColegios.length>0){
+            if(this._chartColegios){this._chartColegios.destroy();this._chartColegios=null;}
+            this._chartColegios=new Chart(ctx1,{type:'doughnut',
+              data:{labels:this.dashboardColegios.map(c=>c.nombre),datasets:[{data:this.dashboardColegios.map(c=>c.total),backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'],borderWidth:0,hoverOffset:4}]},
+              options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11,family:'Plus Jakarta Sans'},boxWidth:10,padding:8}}},cutout:'65%'}});
+          }
+          const ctx2=document.getElementById('chartIngresos');
+          if(ctx2&&this.dashboardIngresos.length>0){
+            if(this._chartIngresos){this._chartIngresos.destroy();this._chartIngresos=null;}
+            this._chartIngresos=new Chart(ctx2,{type:'bar',
+              data:{labels:this.dashboardIngresos.map(m=>m.label),datasets:[{label:'$',data:this.dashboardIngresos.map(m=>m.total),backgroundColor:'rgba(59,130,246,0.65)',borderRadius:6,borderSkipped:false}]},
+              options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+                scales:{y:{ticks:{color:'#64748b',font:{size:10}},grid:{color:'#111d32'}},x:{ticks:{color:'#64748b',font:{size:10}},grid:{display:false}}}}});
+          }
+        }catch(e){console.warn('Chart error:',e);}
+      });
+    },
+
+    async exportCSV(type){
+      let rows=[],filename='';
+      if(type==='clientes'){
+        rows=[['ID','Apellido','Nombre','Colegio','Grado','Teléfono','Plan','Monto','Estado','Inicio','Fin','Notas']];
+        this.clientes.forEach(c=>rows.push([c.id,c.apellido,c.nombre,c.colegio||'',c.grado||'',c.telefono||'',this.getPlanLabel(c.tipoPlan),this.getClientMonto(c),c.estado,c.fechaInicio||'',c.fechaFin||'',(c.notas||'').replace(/,/g,' ')]));
+        filename='rutapro_clientes.csv';
+      }else if(type==='pagos'){
+        const pagos=await db.pagos.where('[mes+anio]').equals([this.billingMes,this.billingAnio]).toArray();
+        const cmap={};this.clientes.forEach(c=>{cmap[c.id]=c;});
+        rows=[['ID_Pago','Apellido','Nombre','Mes','Año','Monto','Estado','Fecha_Pago','Notas']];
+        pagos.forEach(p=>{const c=cmap[p.clienteId];rows.push([p.id,c?.apellido||'',c?.nombre||'',p.mes,p.anio,p.monto,p.estado,p.fechaPago?new Date(p.fechaPago).toLocaleDateString('es-EC'):'',(p.notas||'').replace(/,/g,' ')]);});
+        filename=`rutapro_pagos_${this.billingAnio}_${this.billingMes}.csv`;
+      }else if(type==='morosos'){
+        rows=[['Apellido','Nombre','Colegio','Teléfono','Plan','Monto_Mensual','Deuda_Total','Meses_Pendientes']];
+        this.morososList.forEach(c=>rows.push([c.apellido,c.nombre,c.colegio||'',c.telefono||'',this.getPlanLabel(c.tipoPlan),this.getClientMonto(c),c.deuda,c.mesesDeuda]));
+        filename='rutapro_morosos.csv';
+      }else if(type==='asistencia'){
+        const att=await db.asistencia.where('fecha').equals(this.attDate).toArray();
+        const cmap={};this.clientes.forEach(c=>{cmap[c.id]=c;});
+        rows=[['Fecha','Apellido','Nombre','Colegio','Asistio_Ida','Asistio_Retorno']];
+        att.forEach(a=>{const c=cmap[a.clienteId];rows.push([a.fecha,c?.apellido||'',c?.nombre||'',c?.colegio||'',a.asistioIda?'Sí':'No',a.asistioRetorno?'Sí':'No']);});
+        filename=`rutapro_asistencia_${this.attDate}.csv`;
+      }
+      const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+      const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);const a=document.createElement('a');
+      a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+      document.body.removeChild(a);URL.revokeObjectURL(url);
+      this.showToast('CSV exportado','success');
+    },
+
+    async backup(){
+      const data={version:1,exportedAt:new Date().toISOString(),
+        clientes:await db.clientes.toArray(),colegios:await db.colegios.toArray(),
+        pagos:await db.pagos.toArray(),asistencia:await db.asistencia.toArray(),
+        config:await db.config.toArray()};
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);const a=document.createElement('a');
+      a.href=url;a.download=`rutapro_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+      this.showToast('Backup creado','success');
+    },
+
+    async restore(event){
+      const file=event.target.files[0];if(!file)return;
+      try{
+        const text=await file.text();const data=JSON.parse(text);
+        if(!data.clientes){this.showToast('Archivo inválido','error');return;}
+        const currentCount=await db.clientes.count();
+        const confirmMsg=currentCount>0
+          ?`¿Restaurar backup? ATENCIÓN: Hay ${currentCount} clientes en la base de datos actual. Se crearán NUEVOS registros desde el backup (no se borrarán los existentes). ¿Continuar?`
+          :'¿Restaurar backup? Se importarán todos los datos.';
+        if(!confirm(confirmMsg))return;
+        // Restore: put each record (upsert) — skip individual failures
+        let imported=0;
+        for(const c of (data.clientes||[])){ try{await db.clientes.put(c);imported++;}catch(e){} }
+        for(const col of (data.colegios||[])){ try{await db.colegios.put(col);}catch(e){} }
+        for(const p of (data.pagos||[])){ try{await db.pagos.put(p);imported++;}catch(e){} }
+        for(const a of (data.asistencia||[])){ try{await db.asistencia.put(a);}catch(e){} }
+        for(const c of (data.config||[])){
+          try{
+            const ex=await db.config.where('clave').equals(c.clave).first();
+            if(ex) await db.config.update(ex.id,{valor:c.valor});
+            else await db.config.add({clave:c.clave,valor:c.valor});
+          }catch(e){}
+        }
+        await this.loadConfig();await this.loadColegios();await this.loadClientes();
+        await this.buildDebtMap();await this.loadDashboardData();
+        this.showToast(`Backup restaurado: ${data.clientes?.length||0} clientes, ${data.pagos?.length||0} pagos ✓`,'success');
+      }catch(e){this.showToast('Error: '+e.message,'error');}
+      event.target.value='';
+    },
+
+    // Retention: no auto-delete. Data is always preserved.
+
+    showToast(message,type='success'){
+      const id=++this._toastId;this.toasts.push({id,message,type});
+      setTimeout(()=>{this.toasts=this.toasts.filter(t=>t.id!==id);},3500);
+    },
+    formatNum(n){
+      if(!n&&n!==0)return'0';const num=parseFloat(n);if(isNaN(num))return'0';
+      return num%1===0?num.toString():num.toFixed(2);
+    },
+    formatDateDisplay(d){
+      if(!d)return'';
+      try{const date=d instanceof Date?d:new Date(d);if(isNaN(date.getTime()))return String(d);
+      return date.toLocaleDateString('es-EC',{day:'2-digit',month:'short',year:'numeric'});}
+      catch{return String(d);}
+    },
+    cleanPhone(p){return(p||'').replace(/\D/g,'');},
+    getPlanLabel(plan){return{completo:'Recorrido Completo',ida:'Solo Ida',retorno:'Solo Retorno',personalizado:'Personalizado'}[plan]||plan||'';},
+    getPlanShort(plan){return{completo:'Completo',ida:'Solo Ida',retorno:'Retorno',personalizado:'Personal.'}[plan]||plan||'';},
+    monthName(m){return['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][(m||1)-1]||'';},
+    monthShort(m){return['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][(m||1)-1]||'';},
+
+    // ─── MIRROR BACKUP (localStorage safety net) ────────────────────────────────
+    async mirrorBackup(){
+      try{
+        const clientes=await db.clientes.toArray();
+        const pagos=await db.pagos.orderBy('createdAt').reverse().limit(500).toArray();
+        const config=await db.config.toArray();
+        const snapshot={
+          ts:new Date().toISOString(),
+          clientes,pagos,config,
+          totalClientes:clientes.length,
+          totalPagos:await db.pagos.count(),
+          totalAtt:await db.asistencia.count()
+        };
+        localStorage.setItem('rutapro_mirror',JSON.stringify(snapshot));
+        localStorage.setItem('rutapro_lastSave',new Date().toISOString());
+        localStorage.setItem('rutapro_clientCount',String(clientes.length));
+        this.lastSavedLabel=new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+      }catch(e){
+        console.warn('Mirror backup warning (non-critical):',e);
+      }
+    },
+
+    async recoverFromMirror(){
+      try{
+        const mirror=localStorage.getItem('rutapro_mirror');
+        if(!mirror) return false;
+        const snap=JSON.parse(mirror);
+        if(!snap.clientes||snap.clientes.length===0) return false;
+        const currentCount=await db.clientes.count();
+        if(currentCount>0) return false; // DB has data, skip recovery
+        console.warn('RutaPro: recovering from localStorage mirror...');
+        // Add each record individually — skip on any conflict
+        for(const c of (snap.clientes||[])){
+          try{ const ex=await db.clientes.get(c.id); if(!ex) await db.clientes.add(c); }catch(e){}
+        }
+        for(const p of (snap.pagos||[])){
+          try{ const ex=await db.pagos.get(p.id); if(!ex) await db.pagos.add(p); }catch(e){}
+        }
+        // NOTE: Do NOT touch config here — initDB() already handles defaults safely
+        return true;
+      }catch(e){
+        console.warn('Mirror recovery (non-critical):',e);
+        return false;
+      }
+    },
+
+    setupPWA(){
+      try{
+        const manifest=JSON.stringify({name:'RutaPro - Recorridos Escolares',short_name:'RutaPro',start_url:'./',display:'standalone',background_color:'#060a14',theme_color:'#060a14',description:'Gestión de recorridos escolares',
+          icons:[{src:`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23060a14'/><text y='130' x='96' text-anchor='middle' font-size='120'>🚌</text></svg>`,sizes:'192x192',type:'image/svg+xml'}]});
+        const blob=new Blob([manifest],{type:'application/manifest+json'});
+        const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);
+        document.head.appendChild(link);
+      }catch(e){}
+      if('serviceWorker'in navigator){
+        const sw=`const C='rutapro-v1';self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))))});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>new Response('Offline',{status:503}))))});`;
+        const swBlob=new Blob([sw],{type:'application/javascript'});
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+      }
+    }
+  };
+}
+</script>
+</body>
+</html>
